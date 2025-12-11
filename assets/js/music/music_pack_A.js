@@ -1,160 +1,170 @@
-// Terra-Domus Signature Sound
-// Ambient Pad + Pixel Arp + Star-Trail shimmer
-// 30-second cosmic exploration loop
+// HOYO Ethereal — Liyue / Penacony soft dream ambience
+// 30s loop: gentle pad + bell arp + shimmer
 
 export const MusicPack = [
   {
-    id: "terra_startrail_theme",
-    label: "Terra-Domus Startrail Explorer (30s Loop)",
+    id: "hoyo_ethereal_dream",
+    label: "HOYO · Ethereal Dream (30s)",
 
     play(audioCtx, opts = {}) {
       const { masterGain, loop = true } = opts;
       const out = masterGain || audioCtx.destination;
 
-      // Master bus
-      const mix = audioCtx.createGain();
-      mix.gain.value = 0.32;
-      mix.connect(out);
+      const mainGain = audioCtx.createGain();
+      mainGain.gain.value = 0.32;
+      mainGain.connect(out);
 
-      // --------------------------
-      // 1) Ambient PAD (triangle + sine)
-      // --------------------------
+      const LOOP_MS = 30000;
+
+      // ------------------------
+      // 1) Soft emotional PAD
+      // ------------------------
       const padGain = audioCtx.createGain();
-      padGain.gain.value = 0.22;
-      padGain.connect(mix);
+      padGain.gain.value = 0.25;
+      padGain.connect(mainGain);
 
       const pad1 = audioCtx.createOscillator();
       pad1.type = "triangle";
-      pad1.frequency.value = 174.61;  // F3 base
-      pad1.connect(padGain);
-
       const pad2 = audioCtx.createOscillator();
       pad2.type = "sine";
-      pad2.frequency.value = 87.31;  // F2 supportive bass
-      pad2.detune.value = 10;
+      pad1.connect(padGain);
       pad2.connect(padGain);
 
-      // Slow star-trail drifting (like cosmic movement)
-      const drift = audioCtx.createGain();
-      drift.gain.value = 20; // detune depth
-      drift.connect(pad1.detune);
-      drift.connect(pad2.detune);
-
-      const driftLFO = audioCtx.createOscillator();
-      driftLFO.type = "sine";
-      driftLFO.frequency.value = 0.05; // very slow ~20s wave
-      driftLFO.connect(drift);
-
-      // --------------------------
-      // 2) Pixel arpeggio sparkles
-      // --------------------------
-      const arpGain = audioCtx.createGain();
-      arpGain.gain.value = 0.12;
-      arpGain.connect(mix);
-
-      const arp = audioCtx.createOscillator();
-      arp.type = "square";
-      arp.connect(arpGain);
-
-      // Cosmic ascending pattern
-      const arpNotes = [
-        392.00, // G4
-        440.00, // A4
-        523.25, // C5
-        659.25, // E5
-        523.25, // C5
-        440.00, // A4
-        392.00  // G4
+      // Chord roots (approx Fmaj7 → Gsus2 → Am(add9) → Fmaj7)
+      const padRoots = [
+        174.61, // F3
+        196.0,  // G3
+        220.0,  // A3
+        174.61  // F3
       ];
+      const padThirds = [
+        220.0,  // A3
+        246.94, // B3 (sus2 flavor)
+        261.63, // C4
+        220.0   // A3
+      ];
+      let padIndex = 0;
+      const PAD_STEP_MS = 8000; // 4 chords in ~32s
 
-      let arpIndex = 0;
-      const arpMs = 260;                     // fast but soft
-      const arpTotal = arpNotes.length * arpMs; // ~1.8s cycle
-
-      const arpInterval = setInterval(() => {
+      function setPadChord(i) {
+        const root = padRoots[i];
+        const third = padThirds[i];
         const t = audioCtx.currentTime;
-        arp.frequency.setValueAtTime(arpNotes[arpIndex], t);
-        arpIndex = (arpIndex + 1) % arpNotes.length;
-      }, arpMs);
+        pad1.frequency.setValueAtTime(root, t);
+        pad2.frequency.setValueAtTime(third, t);
+      }
+      setPadChord(padIndex);
 
-      // --------------------------
-      // 3) Gentle shimmer (high chiptune)
-      // --------------------------
+      const padInterval = setInterval(() => {
+        padIndex = (padIndex + 1) % padRoots.length;
+        setPadChord(padIndex);
+      }, PAD_STEP_MS);
+
+      // Gentle detune drift like breathing
+      const padLFOGain = audioCtx.createGain();
+      padLFOGain.gain.value = 15; // detune depth
+      padLFOGain.connect(pad1.detune);
+      padLFOGain.connect(pad2.detune);
+
+      const padLFO = audioCtx.createOscillator();
+      padLFO.type = "sine";
+      padLFO.frequency.value = 0.05; // ~20s cycle
+      padLFO.connect(padLFOGain);
+
+      // ------------------------
+      // 2) Bell-like ARPEGGIO
+      // ------------------------
+      const bellGain = audioCtx.createGain();
+      bellGain.gain.value = 0.12;
+      bellGain.connect(mainGain);
+
+      const bell = audioCtx.createOscillator();
+      bell.type = "sine";
+      bell.connect(bellGain);
+
+      const bellNotes = [
+        523.25, // C5
+        587.33, // D5
+        659.25, // E5
+        783.99, // G5
+        659.25, // E5
+        587.33  // D5
+      ];
+      let bellIndex = 0;
+      const BELL_STEP_MS = 380; // soft arpeggio
+
+      const bellInterval = setInterval(() => {
+        const t = audioCtx.currentTime;
+        const freq = bellNotes[bellIndex];
+        bell.frequency.setValueAtTime(freq, t);
+
+        // little pluck envelope
+        bellGain.gain.cancelScheduledValues(t);
+        bellGain.gain.setValueAtTime(0.0, t);
+        bellGain.gain.linearRampToValueAtTime(0.12, t + 0.05);
+        bellGain.gain.exponentialRampToValueAtTime(0.02, t + 0.30);
+
+        bellIndex = (bellIndex + 1) % bellNotes.length;
+      }, BELL_STEP_MS);
+
+      // ------------------------
+      // 3) High shimmer / air
+      // ------------------------
       const shimmerGain = audioCtx.createGain();
-      shimmerGain.gain.value = 0.05;
-      shimmerGain.connect(mix);
+      shimmerGain.gain.value = 0.03;
+      shimmerGain.connect(mainGain);
 
       const shimmer = audioCtx.createOscillator();
-      shimmer.type = "square";
-      shimmer.frequency.value = 1760; // A6 sparkle
-      shimmerGain.gain.setValueAtTime(0.03, audioCtx.currentTime);
-      shimmer.connect(shimmerGain);
+      shimmer.type = "triangle";
+      shimmer.frequency.value = 1760.0; // A6 airy
 
-      // Slow pulsation of shimmer
-      const shimmerLFOgain = audioCtx.createGain();
-      shimmerLFOgain.gain.value = 0.015;
-      shimmerLFOgain.connect(shimmerGain.gain);
+      const shimmerLFOGain = audioCtx.createGain();
+      shimmerLFOGain.gain.value = 0.018;
+      shimmerLFOGain.connect(shimmerGain.gain);
 
       const shimmerLFO = audioCtx.createOscillator();
       shimmerLFO.type = "sine";
-      shimmerLFO.frequency.value = 0.12; // ~8s pulsation
-      shimmerLFO.connect(shimmerLFOgain);
+      shimmerLFO.frequency.value = 0.15; // gentle shimmer pulse
+      shimmerLFO.connect(shimmerLFOGain);
 
-      // --------------------------
-      // START EVERYTHING
-      // --------------------------
+      shimmer.connect(shimmerGain);
+
+      // ------------------------
+      // start all
+      // ------------------------
       pad1.start();
       pad2.start();
-      driftLFO.start();
-      arp.start();
+      padLFO.start();
+      bell.start();
       shimmer.start();
       shimmerLFO.start();
 
-      // --------------------------
-      // Loop Control
-      // --------------------------
-      const LOOP_DURATION = 30000; // 30 seconds
-
       let stopTimer = null;
-
       if (!loop) {
-        stopTimer = setTimeout(() => {
-          try {
-            pad1.stop();
-            pad2.stop();
-            arp.stop();
-            shimmer.stop();
-            driftLFO.stop();
-            shimmerLFO.stop();
-          } catch (e) {}
-          mix.disconnect();
-          padGain.disconnect();
-          arpGain.disconnect();
-          shimmerGain.disconnect();
-        }, LOOP_DURATION);
+        stopTimer = setTimeout(stopAll, LOOP_MS);
       }
 
-      // --------------------------
-      // STOP FUNCTION
-      // --------------------------
-      return () => {
-        clearInterval(arpInterval);
+      function stopAll() {
+        clearInterval(padInterval);
+        clearInterval(bellInterval);
         if (stopTimer) clearTimeout(stopTimer);
 
         try {
           pad1.stop();
           pad2.stop();
-          arp.stop();
+          padLFO.stop();
+          bell.stop();
           shimmer.stop();
-          driftLFO.stop();
           shimmerLFO.stop();
         } catch (e) {}
 
-        mix.disconnect();
+        mainGain.disconnect();
         padGain.disconnect();
-        arpGain.disconnect();
+        bellGain.disconnect();
         shimmerGain.disconnect();
-      };
+      }
+
+      return stopAll;
     }
   }
 ];
