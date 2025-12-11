@@ -1,3 +1,172 @@
-<script type="module">
-  import { MusicPack } from "./assets/js/music/music_pack_A.js";
-</script>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Music Pack Tester</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <style>
+    body {
+      background: #0a0f1f;
+      color: #e0e7ff;
+      font-family: system-ui, sans-serif;
+      padding: 20px;
+    }
+    .card {
+      max-width: 600px;
+      margin: auto;
+      padding: 20px;
+      background: #111827;
+      border-radius: 12px;
+      border: 1px solid #1f2937;
+    }
+    select, input, button {
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: none;
+      margin-top: 8px;
+      width: 100%;
+      background: #1f2937;
+      color: white;
+    }
+    button {
+      background: #4f46e5;
+      cursor: pointer;
+      margin-top: 12px;
+    }
+    button:hover {
+      background: #6366f1;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="card">
+    <h2>🎧 Music Pack Tester (JS version)</h2>
+    <p>Choose a JS file to load and test the background music.</p>
+
+    <!-- JS FILE SELECTION -->
+    <label>Select JS Music Pack:</label>
+    <select id="jsFileSelect">
+      <option value="">-- Choose JS File --</option>
+      <option value="assets/js/music/music_pack_A.js">Pack A — 8-Bit Calm</option>
+      <option value="assets/js/music/music_pack_B.js">Pack B — Pixel Adventure</option>
+      <option value="assets/js/music/music_pack_C.js">Pack C — Ambient Premium</option>
+    </select>
+
+    <button id="loadBtn">Load Music Pack</button>
+
+    <hr style="margin: 20px 0; border-color:#1f2937;" />
+
+    <label>Tracks:</label>
+    <select id="trackSelect" disabled></select>
+
+    <button id="playBtn" disabled>▶️ Play</button>
+    <button id="pauseBtn" disabled>⏸ Pause</button>
+
+    <label style="margin-top: 12px;">Loop:</label>
+    <input type="checkbox" id="loopToggle" />
+
+    <label style="margin-top: 12px;">Volume:</label>
+    <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="0.5" />
+
+    <p id="status" style="margin-top: 16px; opacity: 0.8;"></p>
+  </div>
+
+  <script type="module">
+    let currentAudio = null;
+    let currentTracks = [];
+
+    const jsFileSelect = document.getElementById("jsFileSelect");
+    const loadBtn = document.getElementById("loadBtn");
+    const trackSelect = document.getElementById("trackSelect");
+    const playBtn = document.getElementById("playBtn");
+    const pauseBtn = document.getElementById("pauseBtn");
+    const loopToggle = document.getElementById("loopToggle");
+    const volumeSlider = document.getElementById("volumeSlider");
+    const status = document.getElementById("status");
+
+    function setStatus(msg) {
+      status.textContent = msg;
+    }
+
+    function stopAudio() {
+      if (currentAudio) {
+        currentAudio.pause();
+        currentAudio = null;
+      }
+    }
+
+    function loadTrack(index) {
+      stopAudio();
+      const track = currentTracks[index];
+      if (!track) return;
+
+      currentAudio = new Audio(track.src);
+      currentAudio.loop = loopToggle.checked;
+      currentAudio.volume = volumeSlider.value;
+
+      setStatus(`Loaded: ${track.label}`);
+    }
+
+    loadBtn.addEventListener("click", async () => {
+      const file = jsFileSelect.value;
+      if (!file) return setStatus("❌ No JS file selected.");
+
+      try {
+        setStatus("Loading JS file...");
+
+        const module = await import("./" + file + "?v=" + Date.now());
+        currentTracks = module.MusicPack;
+
+        trackSelect.innerHTML = "";
+        currentTracks.forEach((track, i) => {
+          const opt = document.createElement("option");
+          opt.value = i;
+          opt.textContent = track.label;
+          trackSelect.appendChild(opt);
+        });
+
+        trackSelect.disabled = false;
+        playBtn.disabled = false;
+        pauseBtn.disabled = false;
+
+        loadTrack(0); // Load first track  
+        setStatus(`Loaded ${currentTracks.length} tracks from ${file}`);
+
+      } catch (err) {
+        console.error(err);
+        setStatus("❌ Error loading JS file.");
+      }
+    });
+
+    trackSelect.addEventListener("change", () => {
+      loadTrack(trackSelect.value);
+    });
+
+    playBtn.addEventListener("click", () => {
+      if (currentAudio) {
+        currentAudio.play();
+        setStatus("▶️ Playing: " + currentTracks[trackSelect.value].label);
+      }
+    });
+
+    pauseBtn.addEventListener("click", () => {
+      if (currentAudio) {
+        currentAudio.pause();
+        setStatus("⏸ Paused");
+      }
+    });
+
+    loopToggle.addEventListener("change", () => {
+      if (currentAudio) currentAudio.loop = loopToggle.checked;
+    });
+
+    volumeSlider.addEventListener("input", () => {
+      if (currentAudio) {
+        currentAudio.volume = volumeSlider.value;
+      }
+    });
+  </script>
+</body>
+</html>
