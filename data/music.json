@@ -1,0 +1,14 @@
+[
+  {
+    "id": "8bit_chill",
+    "label": "8-bit Chill Loop",
+    "src": "assets/audio/8bit-chill.mp3",
+    "loop": true
+  },
+  {
+    "id": "pokemon_red_style",
+    "label": "Pokemon-ish Adventure",
+    "src": "assets/audio/pkmn-style.mp3",
+    "loop": true
+  }
+]
