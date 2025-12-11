@@ -1,172 +1,159 @@
-// Pack A: soft, calm 8-bit exploration
-// Gentle square wave melodies, slow tempo
+// Terra-Domus Signature Sound
+// Ambient Pad + Pixel Arp + Star-Trail shimmer
+// 30-second cosmic exploration loop
 
 export const MusicPack = [
   {
-    id: "8bit_calm_meadow",
-    label: "8-Bit Calm Meadow",
+    id: "terra_startrail_theme",
+    label: "Terra-Domus Startrail Explorer (30s Loop)",
+
     play(audioCtx, opts = {}) {
       const { masterGain, loop = true } = opts;
-      const outputNode = masterGain || audioCtx.destination;
+      const out = masterGain || audioCtx.destination;
 
-      const gain = audioCtx.createGain();
-      gain.gain.value = 0.4;
-      gain.connect(outputNode);
+      // Master bus
+      const mix = audioCtx.createGain();
+      mix.gain.value = 0.32;
+      mix.connect(out);
 
-      const osc = audioCtx.createOscillator();
-      osc.type = "square";
-      osc.connect(gain);
+      // --------------------------
+      // 1) Ambient PAD (triangle + sine)
+      // --------------------------
+      const padGain = audioCtx.createGain();
+      padGain.gain.value = 0.22;
+      padGain.connect(mix);
 
-      const notes = [
-        261.63, // C4
-        293.66, // D4
-        329.63, // E4
-        392.0,  // G4
-        329.63, // E4
-        293.66  // D4
+      const pad1 = audioCtx.createOscillator();
+      pad1.type = "triangle";
+      pad1.frequency.value = 174.61;  // F3 base
+      pad1.connect(padGain);
+
+      const pad2 = audioCtx.createOscillator();
+      pad2.type = "sine";
+      pad2.frequency.value = 87.31;  // F2 supportive bass
+      pad2.detune.value = 10;
+      pad2.connect(padGain);
+
+      // Slow star-trail drifting (like cosmic movement)
+      const drift = audioCtx.createGain();
+      drift.gain.value = 20; // detune depth
+      drift.connect(pad1.detune);
+      drift.connect(pad2.detune);
+
+      const driftLFO = audioCtx.createOscillator();
+      driftLFO.type = "sine";
+      driftLFO.frequency.value = 0.05; // very slow ~20s wave
+      driftLFO.connect(drift);
+
+      // --------------------------
+      // 2) Pixel arpeggio sparkles
+      // --------------------------
+      const arpGain = audioCtx.createGain();
+      arpGain.gain.value = 0.12;
+      arpGain.connect(mix);
+
+      const arp = audioCtx.createOscillator();
+      arp.type = "square";
+      arp.connect(arpGain);
+
+      // Cosmic ascending pattern
+      const arpNotes = [
+        392.00, // G4
+        440.00, // A4
+        523.25, // C5
+        659.25, // E5
+        523.25, // C5
+        440.00, // A4
+        392.00  // G4
       ];
-      let idx = 0;
-      const stepMs = 650;
-      const totalDuration = notes.length * stepMs;
 
-      const intervalId = setInterval(() => {
+      let arpIndex = 0;
+      const arpMs = 260;                     // fast but soft
+      const arpTotal = arpNotes.length * arpMs; // ~1.8s cycle
+
+      const arpInterval = setInterval(() => {
         const t = audioCtx.currentTime;
-        osc.frequency.setValueAtTime(notes[idx], t);
-        idx = (idx + 1) % notes.length;
-      }, stepMs);
+        arp.frequency.setValueAtTime(arpNotes[arpIndex], t);
+        arpIndex = (arpIndex + 1) % arpNotes.length;
+      }, arpMs);
 
-      let stopTimeoutId = null;
+      // --------------------------
+      // 3) Gentle shimmer (high chiptune)
+      // --------------------------
+      const shimmerGain = audioCtx.createGain();
+      shimmerGain.gain.value = 0.05;
+      shimmerGain.connect(mix);
+
+      const shimmer = audioCtx.createOscillator();
+      shimmer.type = "square";
+      shimmer.frequency.value = 1760; // A6 sparkle
+      shimmerGain.gain.setValueAtTime(0.03, audioCtx.currentTime);
+      shimmer.connect(shimmerGain);
+
+      // Slow pulsation of shimmer
+      const shimmerLFOgain = audioCtx.createGain();
+      shimmerLFOgain.gain.value = 0.015;
+      shimmerLFOgain.connect(shimmerGain.gain);
+
+      const shimmerLFO = audioCtx.createOscillator();
+      shimmerLFO.type = "sine";
+      shimmerLFO.frequency.value = 0.12; // ~8s pulsation
+      shimmerLFO.connect(shimmerLFOgain);
+
+      // --------------------------
+      // START EVERYTHING
+      // --------------------------
+      pad1.start();
+      pad2.start();
+      driftLFO.start();
+      arp.start();
+      shimmer.start();
+      shimmerLFO.start();
+
+      // --------------------------
+      // Loop Control
+      // --------------------------
+      const LOOP_DURATION = 30000; // 30 seconds
+
+      let stopTimer = null;
+
       if (!loop) {
-        stopTimeoutId = setTimeout(() => {
-          clearInterval(intervalId);
+        stopTimer = setTimeout(() => {
           try {
-            osc.stop();
+            pad1.stop();
+            pad2.stop();
+            arp.stop();
+            shimmer.stop();
+            driftLFO.stop();
+            shimmerLFO.stop();
           } catch (e) {}
-          gain.disconnect();
-        }, totalDuration + 200);
+          mix.disconnect();
+          padGain.disconnect();
+          arpGain.disconnect();
+          shimmerGain.disconnect();
+        }, LOOP_DURATION);
       }
 
-      osc.start();
-
+      // --------------------------
+      // STOP FUNCTION
+      // --------------------------
       return () => {
-        clearInterval(intervalId);
-        if (stopTimeoutId) clearTimeout(stopTimeoutId);
+        clearInterval(arpInterval);
+        if (stopTimer) clearTimeout(stopTimer);
+
         try {
-          osc.stop();
+          pad1.stop();
+          pad2.stop();
+          arp.stop();
+          shimmer.stop();
+          driftLFO.stop();
+          shimmerLFO.stop();
         } catch (e) {}
-        gain.disconnect();
-      };
-    }
-  },
-  {
-    id: "8bit_soft_river",
-    label: "8-Bit Soft River",
-    play(audioCtx, opts = {}) {
-      const { masterGain, loop = true } = opts;
-      const outputNode = masterGain || audioCtx.destination;
 
-      const gain = audioCtx.createGain();
-      gain.gain.value = 0.35;
-      gain.connect(outputNode);
-
-      const osc = audioCtx.createOscillator();
-      osc.type = "square";
-      osc.connect(gain);
-
-      const notes = [
-        220.0,  // A3
-        246.94, // B3
-        293.66, // D4
-        329.63, // E4
-        293.66, // D4
-        246.94  // B3
-      ];
-      let idx = 0;
-      const stepMs = 700;
-      const totalDuration = notes.length * stepMs;
-
-      const intervalId = setInterval(() => {
-        const t = audioCtx.currentTime;
-        osc.frequency.setValueAtTime(notes[idx], t);
-        idx = (idx + 1) % notes.length;
-      }, stepMs);
-
-      let stopTimeoutId = null;
-      if (!loop) {
-        stopTimeoutId = setTimeout(() => {
-          clearInterval(intervalId);
-          try {
-            osc.stop();
-          } catch (e) {}
-          gain.disconnect();
-        }, totalDuration + 200);
-      }
-
-      osc.start();
-
-      return () => {
-        clearInterval(intervalId);
-        if (stopTimeoutId) clearTimeout(stopTimeoutId);
-        try {
-          osc.stop();
-        } catch (e) {}
-        gain.disconnect();
-      };
-    }
-  },
-  {
-    id: "8bit_warm_home",
-    label: "8-Bit Warm Home",
-    play(audioCtx, opts = {}) {
-      const { masterGain, loop = true } = opts;
-      const outputNode = masterGain || audioCtx.destination;
-
-      const gain = audioCtx.createGain();
-      gain.gain.value = 0.35;
-      gain.connect(outputNode);
-
-      const osc = audioCtx.createOscillator();
-      osc.type = "square";
-      osc.connect(gain);
-
-      const notes = [
-        261.63, // C4
-        311.13, // D#4
-        349.23, // F4
-        415.3,  // G#4
-        349.23, // F4
-        311.13  // D#4
-      ];
-      let idx = 0;
-      const stepMs = 750;
-      const totalDuration = notes.length * stepMs;
-
-      const intervalId = setInterval(() => {
-        const t = audioCtx.currentTime;
-        osc.frequency.setValueAtTime(notes[idx], t);
-        idx = (idx + 1) % notes.length;
-      }, stepMs);
-
-      let stopTimeoutId = null;
-      if (!loop) {
-        stopTimeoutId = setTimeout(() => {
-          clearInterval(intervalId);
-          try {
-            osc.stop();
-          } catch (e) {}
-          gain.disconnect();
-        }, totalDuration + 200);
-      }
-
-      osc.start();
-
-      return () => {
-        clearInterval(intervalId);
-        if (stopTimeoutId) clearTimeout(stopTimeoutId);
-        try {
-          osc.stop();
-        } catch (e) {}
-        gain.disconnect();
+        mix.disconnect();
+        padGain.disconnect();
+        arpGain.disconnect();
+        shimmerGain.disconnect();
       };
     }
   }
