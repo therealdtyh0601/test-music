@@ -1,192 +1,193 @@
-// Pack C: more ambient, airy, less "gamey"
-// Triangle & sine mix, slower movements
+// HOYO Adventure — hopeful overworld vibe, gentle pulse
+// 30s loop: warm pad + upbeat arp + subtle "step" bass
 
 export const MusicPack = [
   {
-    id: "ambient_cosmic_air",
-    label: "Ambient Cosmic Air",
+    id: "hoyo_adventure_route",
+    label: "HOYO · Adventure Route (30s)",
+
     play(audioCtx, opts = {}) {
       const { masterGain, loop = true } = opts;
-      const outputNode = masterGain || audioCtx.destination;
+      const out = masterGain || audioCtx.destination;
 
-      const baseGain = audioCtx.createGain();
-      baseGain.gain.value = 0.28;
-      baseGain.connect(outputNode);
+      const mainGain = audioCtx.createGain();
+      mainGain.gain.value = 0.34;
+      mainGain.connect(out);
 
-      const osc1 = audioCtx.createOscillator();
-      osc1.type = "triangle";
-      osc1.connect(baseGain);
+      const LOOP_MS = 30000;
 
-      const osc2 = audioCtx.createOscillator();
-      osc2.type = "sine";
-      osc2.detune.value = 15; // slight shimmer
-      osc2.connect(baseGain);
+      // ------------------------
+      // 1) Warm pad (C major / hopeful)
+      // ------------------------
+      const padGain = audioCtx.createGain();
+      padGain.gain.value = 0.22;
+      padGain.connect(mainGain);
 
-      const notes = [
-        220.0,  // A3
-        246.94, // B3
+      const pad1 = audioCtx.createOscillator();
+      pad1.type = "triangle";
+      const pad2 = audioCtx.createOscillator();
+      pad2.type = "sine";
+      pad1.connect(padGain);
+      pad2.connect(padGain);
+
+      const padRoots = [
         261.63, // C4
         293.66, // D4
+        329.63, // E4
         261.63  // C4
       ];
-      let idx = 0;
-      const stepMs = 1200;
-      const totalDuration = notes.length * stepMs * 2;
-
-      const intervalId = setInterval(() => {
-        const t = audioCtx.currentTime;
-        const freq = notes[idx];
-        osc1.frequency.setValueAtTime(freq, t);
-        osc2.frequency.setValueAtTime(freq / 2, t); // lower pad
-        idx = (idx + 1) % notes.length;
-      }, stepMs);
-
-      let stopTimeoutId = null;
-      if (!loop) {
-        stopTimeoutId = setTimeout(() => {
-          clearInterval(intervalId);
-          try {
-            osc1.stop();
-            osc2.stop();
-          } catch (e) {}
-          baseGain.disconnect();
-        }, totalDuration + 400);
-      }
-
-      osc1.start();
-      osc2.start();
-
-      return () => {
-        clearInterval(intervalId);
-        if (stopTimeoutId) clearTimeout(stopTimeoutId);
-        try {
-          osc1.stop();
-          osc2.stop();
-        } catch (e) {}
-        baseGain.disconnect();
-      };
-    }
-  },
-  {
-    id: "ambient_home_space",
-    label: "Ambient Home Space",
-    play(audioCtx, opts = {}) {
-      const { masterGain, loop = true } = opts;
-      const outputNode = masterGain || audioCtx.destination;
-
-      const baseGain = audioCtx.createGain();
-      baseGain.gain.value = 0.26;
-      baseGain.connect(outputNode);
-
-      const osc1 = audioCtx.createOscillator();
-      osc1.type = "sine";
-      osc1.connect(baseGain);
-
-      const osc2 = audioCtx.createOscillator();
-      osc2.type = "triangle";
-      osc2.detune.value = -10;
-      osc2.connect(baseGain);
-
-      const notes = [
-        174.61, // F3
-        196.0,  // G3
-        220.0,  // A3
-        196.0   // G3
+      const padFifths = [
+        392.0,  // G4
+        440.0,  // A4
+        493.88, // B4
+        392.0   // G4
       ];
-      let idx = 0;
-      const stepMs = 1400;
-      const totalDuration = notes.length * stepMs * 2;
+      let padIndex = 0;
+      const PAD_STEP_MS = 7000;
 
-      const intervalId = setInterval(() => {
+      function setPadChord(i) {
         const t = audioCtx.currentTime;
-        const freq = notes[idx];
-        osc1.frequency.setValueAtTime(freq, t);
-        osc2.frequency.setValueAtTime(freq * 1.5, t);
-        idx = (idx + 1) % notes.length;
-      }, stepMs);
-
-      let stopTimeoutId = null;
-      if (!loop) {
-        stopTimeoutId = setTimeout(() => {
-          clearInterval(intervalId);
-          try {
-            osc1.stop();
-            osc2.stop();
-          } catch (e) {}
-          baseGain.disconnect();
-        }, totalDuration + 400);
+        pad1.frequency.setValueAtTime(padRoots[i], t);
+        pad2.frequency.setValueAtTime(padFifths[i], t);
       }
+      setPadChord(padIndex);
 
-      osc1.start();
-      osc2.start();
+      const padInterval = setInterval(() => {
+        padIndex = (padIndex + 1) % padRoots.length;
+        setPadChord(padIndex);
+      }, PAD_STEP_MS);
 
-      return () => {
-        clearInterval(intervalId);
-        if (stopTimeoutId) clearTimeout(stopTimeoutId);
-        try {
-          osc1.stop();
-          osc2.stop();
-        } catch (e) {}
-        baseGain.disconnect();
-      };
-    }
-  },
-  {
-    id: "ambient_lightstream",
-    label: "Ambient Lightstream",
-    play(audioCtx, opts = {}) {
-      const { masterGain, loop = true } = opts;
-      const outputNode = masterGain || audioCtx.destination;
+      // gentle slow detune
+      const padLFOGain = audioCtx.createGain();
+      padLFOGain.gain.value = 10;
+      padLFOGain.connect(pad1.detune);
+      padLFOGain.connect(pad2.detune);
 
-      const baseGain = audioCtx.createGain();
-      baseGain.gain.value = 0.24;
-      baseGain.connect(outputNode);
+      const padLFO = audioCtx.createOscillator();
+      padLFO.type = "sine";
+      padLFO.frequency.value = 0.06;
+      padLFO.connect(padLFOGain);
 
-      const osc = audioCtx.createOscillator();
-      osc.type = "sine";
-      osc.connect(baseGain);
+      // ------------------------
+      // 2) Upbeat ARPEGGIO
+      // ------------------------
+      const arpGain = audioCtx.createGain();
+      arpGain.gain.value = 0.15;
+      arpGain.connect(mainGain);
 
-      const notes = [
-        261.63, // C4
-        277.18, // C#4
-        293.66, // D4
-        311.13, // D#4
-        329.63, // E4
-        311.13, // D#4
-        293.66  // D4
+      const arp = audioCtx.createOscillator();
+      arp.type = "square";
+      arp.connect(arpGain);
+
+      const arpNotes = [
+        523.25, // C5
+        659.25, // E5
+        783.99, // G5
+        659.25, // E5
+        587.33, // D5
+        523.25  // C5
       ];
-      let idx = 0;
-      const stepMs = 1100;
-      const totalDuration = notes.length * stepMs * 2;
+      let arpIndex = 0;
+      const ARP_STEP_MS = 230;
 
-      const intervalId = setInterval(() => {
+      const arpInterval = setInterval(() => {
         const t = audioCtx.currentTime;
-        const freq = notes[idx];
-        osc.frequency.setValueAtTime(freq, t);
-        idx = (idx + 1) % notes.length;
-      }, stepMs);
+        const freq = arpNotes[arpIndex];
+        arp.frequency.setValueAtTime(freq, t);
 
-      let stopTimeoutId = null;
+        // pluck
+        arpGain.gain.cancelScheduledValues(t);
+        arpGain.gain.setValueAtTime(0.0, t);
+        arpGain.gain.linearRampToValueAtTime(0.16, t + 0.04);
+        arpGain.gain.exponentialRampToValueAtTime(0.03, t + 0.25);
+
+        arpIndex = (arpIndex + 1) % arpNotes.length;
+      }, ARP_STEP_MS);
+
+      // ------------------------
+      // 3) Subtle "step" bass pulse
+      // ------------------------
+      const bassGain = audioCtx.createGain();
+      bassGain.gain.value = 0.11;
+      bassGain.connect(mainGain);
+
+      const bass = audioCtx.createOscillator();
+      bass.type = "square";
+      bass.frequency.value = 130.81; // C3
+      bass.connect(bassGain);
+
+      const BASS_STEP_MS = 460; // aligns loosely w/ arp, gives walk feel
+
+      const bassInterval = setInterval(() => {
+        const t = audioCtx.currentTime;
+        // short pulse envelope
+        bassGain.gain.cancelScheduledValues(t);
+        bassGain.gain.setValueAtTime(0.0, t);
+        bassGain.gain.linearRampToValueAtTime(0.11, t + 0.03);
+        bassGain.gain.exponentialRampToValueAtTime(0.02, t + 0.18);
+      }, BASS_STEP_MS);
+
+      // ------------------------
+      // 4) Airy top shimmer (very light)
+      // ------------------------
+      const shimmerGain = audioCtx.createGain();
+      shimmerGain.gain.value = 0.018;
+      shimmerGain.connect(mainGain);
+
+      const shimmer = audioCtx.createOscillator();
+      shimmer.type = "triangle";
+      shimmer.frequency.value = 1760.0; // A6
+      shimmer.connect(shimmerGain);
+
+      const shimmerLFOGain = audioCtx.createGain();
+      shimmerLFOGain.gain.value = 0.012;
+      shimmerLFOGain.connect(shimmerGain.gain);
+
+      const shimmerLFO = audioCtx.createOscillator();
+      shimmerLFO.type = "sine";
+      shimmerLFO.frequency.value = 0.18;
+      shimmerLFO.connect(shimmerLFOGain);
+
+      // ------------------------
+      // start all
+      // ------------------------
+      pad1.start();
+      pad2.start();
+      padLFO.start();
+      arp.start();
+      bass.start();
+      shimmer.start();
+      shimmerLFO.start();
+
+      let stopTimer = null;
       if (!loop) {
-        stopTimeoutId = setTimeout(() => {
-          clearInterval(intervalId);
-          try {
-            osc.stop();
-          } catch (e) {}
-          baseGain.disconnect();
-        }, totalDuration + 400);
+        stopTimer = setTimeout(stopAll, LOOP_MS);
       }
 
-      osc.start();
+      function stopAll() {
+        clearInterval(padInterval);
+        clearInterval(arpInterval);
+        clearInterval(bassInterval);
+        if (stopTimer) clearTimeout(stopTimer);
 
-      return () => {
-        clearInterval(intervalId);
-        if (stopTimeoutId) clearTimeout(stopTimeoutId);
         try {
-          osc.stop();
+          pad1.stop();
+          pad2.stop();
+          padLFO.stop();
+          arp.stop();
+          bass.stop();
+          shimmer.stop();
+          shimmerLFO.stop();
         } catch (e) {}
-        baseGain.disconnect();
-      };
+
+        mainGain.disconnect();
+        padGain.disconnect();
+        arpGain.disconnect();
+        bassGain.disconnect();
+        shimmerGain.disconnect();
+      }
+
+      return stopAll;
     }
   }
 ];
